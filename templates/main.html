@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>FRAMS — Start Recognition</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap 3 -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <style>
+    body { background: #f6f8fa; }
+    .hero { padding: 60px 0; text-align:center; }
+    .hero .btn-lg { padding: 14px 26px; font-size: 18px; }
+    .muted-small { color: #6c757d; font-size: 13px; }
+    .top-links { margin-top: 15px; }
+    .mode-btn { margin: 6px; min-width: 200px; }
+
+    /* Modal specific - keep small and unobtrusive */
+    .modal-body .help-block { margin-top: 6px; color: #666; font-size: 13px; }
+    #uploadResult, #classUploadResult { display:none; margin-top:8px; }
+    .small-list { max-height: 160px; overflow:auto; border:1px solid #eee; padding:8px; background:#fff; }
+
+    /* per-face card */
+    .face-card { border:1px solid #e6e6e6; padding:8px; margin-bottom:8px; background:#fff; border-radius:4px; }
+    .face-thumb { width:64px; height:64px; object-fit:cover; border:1px solid #ddd; }
+    .label-unknown { color:#a94442; font-weight:600; }
+  </style>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<nav class="navbar navbar-inverse">
+  <div class="container">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/">FRAMS</a>
+    </div>
+    <ul class="nav navbar-nav navbar-right">
+      <li><a href="/index">Register Student</a></li>
+      <li><a href="/teacher_register">Register Teacher</a></li>
+      <li><a href="/whole">All Attendance</a></li>
+      <li><a href="/dashboard">Dashboard</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="hero">
+    <h1>Start Face Recognition</h1>
+    <p class="lead muted-small">
+      Choose which group to recognize. When you press any Start button, the server opens the camera window (fullscreen)
+      on the host machine and begins recognizing faces. This must run on the machine with the camera & display.
+    </p>
+
+    <div id="controls" style="display:inline-block;">
+      <button id="startStudents" class="btn btn-primary btn-lg mode-btn">
+        <span class="glyphicon glyphicon-user" aria-hidden="true"></span>&nbsp; Start Students
+      </button>
+
+      <button id="startTeachers" class="btn btn-warning btn-lg mode-btn">
+        <span class="glyphicon glyphicon-education" aria-hidden="true"></span>&nbsp; Start Teachers
+      </button>
+
+      <button id="startBoth" class="btn btn-success btn-lg mode-btn">
+        <span class="glyphicon glyphicon-check" aria-hidden="true"></span>&nbsp; Start Both
+      </button>
+
+      <button id="stopBtn" type="button" class="btn btn-danger btn-lg mode-btn" style="display:none; margin-left:10px;">
+        <span class="glyphicon glyphicon-stop" aria-hidden="true"></span>&nbsp; Stop Recognition
+      </button>
+    </div>
+
+    <div class="top-links" style="margin-top:15px;">
+      <a href="/index" class="btn btn-default">Register Student</a>
+      <a href="/teacher_register" class="btn btn-default">Register Teacher</a>
+      <a href="/new" class="btn btn-default">New</a>
+
+      <!-- NEW: Upload Class Photo button (opens modal) -->
+      <button id="openClassUploadModal" class="btn btn-warning">Upload Class Photo</button>
+
+    </div>
+
+    <p class="muted-small" style="margin-top:18px;">
+      Press <strong>ESC</strong> in the camera window to cancel. <a href="#" title="Dismissible popover" data-toggle="popover" data-trigger="focus" data-content="If Flask runs on a remote headless server this won't work. Use browser capture for remote deployments.">Why server camera?</a>
+    </p>
+  </div>
+
+  <!-- Upload Student Photo Modal (unchanged) -->
+  <div id="uploadStudentModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="uploadStudentModalLabel">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <form id="uploadStudentForm" enctype="multipart/form-data" method="post" action="/upload_student_photo">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button>
+            <h4 class="modal-title" id="uploadStudentModalLabel">Upload Student Photo</h4>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="stu_name">Student Name</label>
+              <input type="text" class="form-control" id="stu_name" name="name" placeholder="e.g. Rahul" required>
+            </div>
+            <div class="form-group">
+              <label for="stu_parent_phone">Parent Phone (optional)</label>
+              <input type="text" class="form-control" id="stu_parent_phone" name="parent_phone" placeholder="+91...">
+            </div>
+            <div class="form-group">
+              <label for="stu_image">Choose photo</label>
+              <input type="file" id="stu_image" name="image" accept="image/*" class="form-control" required>
+              <p class="help-block">Use a clear front-facing photo (no sunglasses/mask recommended).</p>
+            </div>
+
+            <div id="uploadResult" class="alert" role="alert" style="display:none;"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+            <button id="uploadStudentBtn" type="submit" class="btn btn-primary">Upload Photo</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <!-- End student modal -->
+
+  <!-- NEW: Upload Class Photo Modal (updated) -->
+  <div id="uploadClassModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="uploadClassModalLabel">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <form id="uploadClassForm" enctype="multipart/form-data" method="post" action="/upload_class_photo">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button>
+            <h4 class="modal-title" id="uploadClassModalLabel">Upload Class Photo (Mark Attendance)</h4>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-sm-6">
+
+                <div class="form-group">
+                  <label for="class_photo">Class Photo</label>
+                  <input type="file" id="class_photo" name="photo" accept="image/*" class="form-control" required>
+                  <p class="help-block">Take a clear group photo. Ensure faces are visible and not too small.</p>
+                </div>
+
+                <div class="checkbox">
+                  <label>
+                    <input type="checkbox" id="annotate" name="annotate" value="true"> Save annotated image (boxes + names)
+                  </label>
+                </div>
+
+                <div id="classUploadResult" class="alert" role="alert" style="display:none;"></div>
+              </div>
+
+              <div class="col-sm-6">
+                <div id="classUploadDetails" style="display:none;">
+                  <h5>Summary</h5>
+                  <div><strong>Detected faces:</strong> <span id="detection_count">0</span></div>
+                  <div><strong>Matched (present):</strong> <span id="matched_count">0</span></div>
+                  <hr>
+
+                  <h5>Present (<span id="present_count">0</span>)</h5>
+                  <div id="present_list" class="small-list"></div>
+
+                  <h5 style="margin-top:10px;">Absent (<span id="absent_count">0</span>)</h5>
+                  <div id="absent_list" class="small-list"></div>
+
+                  <div id="photo_link" style="margin-top:8px;"></div>
+
+                  <hr>
+                  <h5>Per-face results (top candidates)</h5>
+                  <div id="matches_list"></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+            <button id="uploadClassBtn" type="submit" class="btn btn-warning">Upload & Mark Attendance</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <!-- End class modal -->
+
+  <div class="row">
+    <div class="col-md-8 col-md-offset-2">
+      <div class="panel panel-default">
+        <div class="panel-body">
+          <h4>Quick tips</h4>
+          <ul>
+            <li>Register students and teachers first (Register Student / Register Teacher).</li>
+            <li>Teacher images saved as <code>Training images/teachers/T_name.png</code> (the code expects that naming if using T_ prefix).</li>
+            <li>Use "Start Both" to recognize students and teachers together.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+
+
+$(function(){
+    $('[data-toggle="popover"]').popover();
+
+    const startStudents = $('#startStudents');
+    const startTeachers = $('#startTeachers');
+    const startBoth = $('#startBoth');
+    const stopBtn = $('#stopBtn');
+
+    function setRunningState(val){
+        if(val){
+            // disable all starts, show stop
+            startStudents.prop('disabled', true);
+            startTeachers.prop('disabled', true);
+            startBoth.prop('disabled', true);
+            stopBtn.show().prop('disabled', false).text('Stop Recognition');
+        } else {
+            startStudents.prop('disabled', false).text('Start Students');
+            startTeachers.prop('disabled', false).text('Start Teachers');
+            startBoth.prop('disabled', false).text('Start Both');
+            stopBtn.hide();
+        }
+    }
+
+    setRunningState(false);
+
+    function startMode(mode){
+        setRunningState(true);
+        // POST to / with mode param; server should read request.form['mode']
+        fetch('/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'mode=' + encodeURIComponent(mode)
+        }).then(async resp => {
+            const text = await resp.text();
+            // server returned (recognition ended) — replace page with returned HTML
+            document.open();
+            document.write(text);
+            document.close();
+        }).catch(err => {
+            console.error('Recognition request failed:', err);
+            alert('Recognition failed: ' + err);
+            setRunningState(false);
+        });
+    }
+
+    startStudents.on('click', function(){ startMode('students'); });
+    startTeachers.on('click', function(){ startMode('teachers'); });
+    startBoth.on('click', function(){ startMode('both'); });
+
+    stopBtn.on('click', function(){
+        stopBtn.prop('disabled', true).text('Stopping...');
+        fetch('/stop', { method: 'POST' })
+            .then(() => {
+                // server will finish the recognition loop and return; UI will be updated when fetch('/') resolves
+            })
+            .catch(err => {
+                console.error('Failed to request stop:', err);
+                alert('Failed to request stop: ' + err);
+                stopBtn.prop('disabled', false).text('Stop Recognition');
+            });
+    });
+
+    // Upload student modal handlers (unchanged)
+    $('#openUploadModal').on('click', function(){
+      $('#uploadResult').hide();
+      $('#uploadStudentForm')[0].reset();
+      $('#uploadStudentModal').modal('show');
+    });
+
+    $('#uploadStudentForm').on('submit', function(e){
+      e.preventDefault();
+      const form = document.getElementById('uploadStudentForm');
+      const formData = new FormData(form);
+      const btn = document.getElementById('uploadStudentBtn');
+      btn.disabled = true;
+      btn.innerText = 'Uploading...';
+      $('#uploadResult').removeClass('alert-success alert-danger').hide();
+
+      fetch('/upload_student_photo', { method: 'POST', body: formData })
+        .then(async resp => {
+          const json = await resp.json();
+          const alertBox = $('#uploadResult');
+          alertBox.show();
+          if(json.success){
+            alertBox.removeClass('alert-danger').addClass('alert-success').text('Upload successful. Student registered and encoding updated.');
+            // close modal after short delay so teacher sees message
+            setTimeout(() => { $('#uploadStudentModal').modal('hide'); alertBox.hide(); }, 1000);
+          } else {
+            alertBox.removeClass('alert-success').addClass('alert-danger').text('Error: ' + (json.error || 'Unknown error'));
+          }
+        })
+        .catch(err => {
+          $('#uploadResult').show().removeClass('alert-success').addClass('alert-danger').text('Upload failed: ' + err);
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.innerText = 'Upload Photo';
+        });
+    });
+
+    // NEW: Upload class photo handlers (enhanced UI)
+    $('#openClassUploadModal').on('click', function(){
+      $('#classUploadResult').hide();
+      $('#classUploadDetails').hide();
+      $('#matches_list').empty();
+      $('#uploadClassForm')[0].reset();
+      $('#uploadClassModal').modal('show');
+    });
+
+    function renderMatches(matches){
+      const container = $('#matches_list');
+      container.empty();
+      if(!Array.isArray(matches) || matches.length === 0){
+        container.append('<div><em>No faces detected.</em></div>');
+        return;
+      }
+      matches.forEach((m, idx) => {
+        const boxStr = m.box ? `Box: [${m.box.join(',')}]` : '';
+        const nameLabel = m.studentId ? `<strong>${m.studentId}</strong>` : '<span class="label-unknown">Unknown</span>';
+        const dist = (m.distance !== null && m.distance !== undefined) ? ` / ${m.distance.toFixed(3)}` : '';
+        const topList = Array.isArray(m.top_candidates) ? m.top_candidates.map(c => `${c.name} (${c.dist.toFixed(3)})`).join('<br>') : '';
+
+        const html = `
+          <div class="face-card row">
+            <div class="col-xs-9">
+              <div><strong>Face #${idx+1}:</strong> ${nameLabel}${dist}</div>
+              <div class="muted-small">${boxStr}</div>
+              <div style="margin-top:6px;"><em>Top candidates:</em><br>${topList}</div>
+            </div>
+            <div class="col-xs-3 text-right">
+              <!-- optional thumbnail could go here -->
+            </div>
+          </div>
+        `;
+        container.append(html);
+      });
+    }
+
+    $('#uploadClassForm').on('submit', function(e){
+      e.preventDefault();
+      const form = document.getElementById('uploadClassForm');
+      const formData = new FormData(form);
+      const btn = document.getElementById('uploadClassBtn');
+      btn.disabled = true;
+      btn.innerText = 'Uploading...';
+      $('#classUploadResult').removeClass('alert-success alert-danger').hide();
+      $('#classUploadDetails').hide();
+      $('#matches_list').empty();
+
+      fetch('/upload_class_photo', { method: 'POST', body: formData })
+        .then(async resp => {
+          const json = await resp.json();
+          const alertBox = $('#classUploadResult');
+          alertBox.show();
+          if(json.success){
+            alertBox.removeClass('alert-danger').addClass('alert-success').text('Class photo processed. Attendance marked (auto-present).');
+
+            // detection and matched counts
+            $('#detection_count').text(json.detection_count !== undefined ? json.detection_count : 'N/A');
+            $('#matched_count').text(json.matched_count !== undefined ? json.matched_count : (Array.isArray(json.present) ? json.present.length : 0));
+
+            const present = Array.isArray(json.present) ? json.present : [];
+            const absent = Array.isArray(json.absent) ? json.absent : [];
+
+            $('#present_count').text(present.length);
+            $('#absent_count').text(absent.length);
+
+            $('#present_list').html(present.length ? present.map(n => `<div>${n}</div>`).join('') : '<div><em>None</em></div>');
+            $('#absent_list').html(absent.length ? absent.map(n => `<div>${n}</div>`).join('') : '<div><em>None</em></div>');
+
+            if(json.annotatedPath){
+              $('#photo_link').html(`<a href="${json.annotatedPath}" target="_blank">View annotated photo</a>`);
+            } else if(json.photoPath){
+              $('#photo_link').html(`<a href="${json.photoPath}" target="_blank">View saved photo</a>`);
+            } else {
+              $('#photo_link').html('');
+            }
+
+            // per-face matches if available
+            renderMatches(json.matches);
+
+            $('#classUploadDetails').show();
+
+          } else {
+            alertBox.removeClass('alert-success').addClass('alert-danger').text('Error: ' + (json.error || 'Unknown error'));
+          }
+        })
+        .catch(err => {
+          $('#classUploadResult').show().removeClass('alert-success').addClass('alert-danger').text('Upload failed: ' + err);
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.innerText = 'Upload & Mark Attendance';
+        });
+    });
+
+});
+</script>
+
+</body>
+</html>

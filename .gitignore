@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+.env
+
+attendance.csv
+attendance_teachers.csv
+
+encodings.pkl
+
+class_photos/
+
+*.pyc
+*.db

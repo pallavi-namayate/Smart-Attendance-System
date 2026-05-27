@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>FRAMS — Register Student</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap 3 (same as your other templates) -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <style>
+    body { background:#f7f9fb; padding-top:60px; }
+    .card { padding:20px; background:#fff; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+    .required { color: #d9534f; margin-left: 4px; }
+  </style>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<nav class="navbar navbar-inverse navbar-fixed-top">
+  <div class="container">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/">FRAMS</a>
+    </div>
+    <ul class="nav navbar-nav navbar-right">
+      <li><a href="/">Start Recognition</a></li>
+      <li><a href="/new">Quick</a></li>
+      <!-- <li><a href="/dashboard">Dashboard</a></li> -->
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-6 col-md-offset-3 card">
+      <h3 class="text-center">Register / Capture Student Image</h3>
+      <p class="text-muted">Enter the student's name, parent's phone (required), click <strong>Capture Image</strong>. The server will open the camera window on the host machine. Press <strong>SPACE</strong> to save.</p>
+
+      <form method="POST" action="/name" id="registerForm" autocomplete="off" novalidate>
+        <div class="form-group">
+          <label for="name1">Student name <span class="required">*</span></label>
+          <input id="name1" name="name1" class="form-control" placeholder="e.g. amlan" required>
+        </div>
+
+        <div class="form-group">
+          <label for="name2">Extra <small class="text-muted">(Roll no, class, etc.)</small></label>
+          <input id="name2" name="name2" class="form-control" placeholder="Roll no, class, etc.">
+        </div>
+
+        <div class="form-group">
+          <label for="parent_phone">Parent phone <span class="required">*</span></label>
+          <input id="parent_phone" name="parent_phone" type="tel" class="form-control"
+                 placeholder="+919876543210" required
+                 pattern="^\+?\d{7,15}$"
+                 title="Enter phone number in international format, e.g. +919876543210">
+          <p class="help-block">Recommended format: <code>+{countrycode}{number}</code> (e.g. <code>+919876543210</code>).</p>
+        </div>
+
+        <div class="form-group text-center">
+          <button type="submit" class="btn btn-success btn-lg">
+            <span class="glyphicon glyphicon-camera" aria-hidden="true"></span>
+            &nbsp; Capture Image
+          </button>
+          &nbsp;
+          <a href="/index" class="btn btn-default btn-lg">Reload</a>
+        </div>
+      </form>
+
+      <hr>
+      <p class="small text-muted">Images are saved in the server's <code>Training images/</code> folder as <code>&lt;name&gt;.png</code>. Students' parent contacts are stored in <code>students.csv</code> (columns: <code>name,parent_email,parent_phone,extra</code>).</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // small client-side validation improvement for pattern support
+  (function() {
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+      var phone = document.getElementById('parent_phone');
+      if (!phone.checkValidity()) {
+        e.preventDefault();
+        phone.focus();
+        alert(phone.title || 'Please enter a valid phone number in international format (e.g. +919876543210).');
+      }
+    });
+  })();
+</script>
+
+</body>
+</html>

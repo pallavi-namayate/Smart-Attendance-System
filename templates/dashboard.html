@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard — Absentees for {{ date }}</title>
+
+    <!-- Optional: Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 20px;
+            background: #f7f9fb;
+        }
+
+        h1 {
+            margin-bottom: 6px;
+        }
+
+        .top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .meta {
+            color: #666;
+            font-size: 14px;
+        }
+
+        #notify-result {
+            margin-top: 20px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            background: #fff;
+            max-height: 420px;
+            overflow-y: auto;
+            display: none;
+            white-space: pre-wrap;
+        }
+
+        #notify-btn, #refresh-btn, #home-btn {
+            padding: 8px 14px;
+            font-size: 15px;
+            cursor: pointer;
+            border-radius: 6px;
+            border: 1px solid #007bff;
+            background: #007bff;
+            color: white;
+        }
+
+        #refresh-btn {
+            background: #6c757d;
+            border-color: #6c757d;
+        }
+
+        #home-btn {
+            background: #28a745;
+            border-color: #28a745;
+        }
+
+        .result-ok {
+            color: green;
+            font-weight: bold;
+        }
+
+        .result-fail {
+            color: red;
+            font-weight: bold;
+        }
+
+        .small {
+            font-size: 13px;
+            color: #555;
+        }
+
+        .phone {
+            font-family: monospace;
+        }
+
+        .no-data {
+            padding: 12px;
+            background: #f0f8ff;
+            border: 1px dashed #cce5ff;
+            color: #333;
+            margin-top: 12px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="top-row">
+        <div>
+            <h1>Dashboard</h1>
+            <div class="meta">Absentees for <strong>{{ date }}</strong></div>
+        </div>
+
+        <div class="actions">
+            <a href="/" id="home-btn" title="Go back to Home">🏠 Home</a>
+            <button id="notify-btn" title="Send SMS to parents of absentees">📢 Send Absent SMS</button>
+            <button id="refresh-btn" title="Reload dashboard">🔄 Refresh</button>
+        </div>
+    </div>
+
+    <hr>
+
+    <div>
+        <h4>Absent students ({{ rows|length }})</h4>
+
+        {% if rows and rows|length > 0 %}
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">#</th>
+                        <th>Student Name</th>
+                        <th style="width:220px;">Parent Phone</th>
+                        <th style="width:150px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ r.name }}</td>
+                        <td class="phone">{{ r.parent_phone or '-' }}</td>
+                        <td>
+                            <div class="small">
+                                {% if r.parent_phone %}
+                                    <button class="btn btn-xs btn-default copy-phone" data-phone="{{ r.parent_phone }}">Copy</button>
+                                    <a class="btn btn-xs btn-primary" href="sms:{{ r.parent_phone }}">SMS</a>
+                                {% else %}
+                                    <span class="small text-muted">No phone</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="no-data">
+            No absentees recorded for today. (Either no training images are registered or attendance already marked.)
+        </div>
+        {% endif %}
+    </div>
+
+    <div id="notify-result"></div>
+
+    <script>
+        $(function () {
+            $("#refresh-btn").on('click', function () {
+                location.reload();
+            });
+
+            $(document).on('click', '.copy-phone', function () {
+                const phone = $(this).data('phone') || '';
+                if (!phone) return;
+                navigator.clipboard?.writeText(phone).then(function () {
+                    alert('Phone copied: ' + phone);
+                }, function () {
+                    const ta = document.createElement('textarea');
+                    ta.value = phone;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    try { document.execCommand('copy'); alert('Phone copied: ' + phone); } catch (e) { alert('Copy failed'); }
+                    document.body.removeChild(ta);
+                });
+            });
+
+            $("#notify-btn").click(function () {
+                $("#notify-result").html("⏳ Sending absent notifications...").show();
+
+                $.ajax({
+                    url: "/notify_absentees",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({}),
+                    success: function (resp) {
+                        if (resp.success) {
+                            let out = "<h3>Absent SMS Notifications</h3>";
+                            out += "<p class='small'>Date: " + resp.payload.date + "</p>";
+                            out += "<p class='small'>Total Absentees: " + resp.payload.absentees_count + "</p>";
+                            if (resp.payload.absentees_count === 0) {
+                                out += "<p>No absentees found for this date.</p>";
+                            } else {
+                                out += "<table cellpadding=6 style='border-collapse:collapse; width:100%'>";
+                                out += "<thead><tr><th align=left>Name</th><th align=left>Status</th><th align=left>Details</th></tr></thead>";
+                                out += "<tbody>";
+                                resp.payload.results.forEach(function (r) {
+                                    const status = r.sms_sent ? '<span class=\"result-ok\">SMS ✅</span>' : '<span class=\"result-fail\">SMS ❌</span>';
+                                    let details = r.errors && r.errors.length ? r.errors.join(', ') : (r.sms_sent ? 'Sent' : 'No phone');
+                                    out += `<tr><td>${r.name}</td><td>${status}</td><td class="small">${details}</td></tr>`;
+                                });
+                                out += "</tbody></table>";
+                            }
+                            out += "<p class='small'>(Logs also printed to server console.)</p>";
+                            $("#notify-result").html(out).show();
+                        } else {
+                            $("#notify-result").html("❌ Error: " + resp.error).show();
+                        }
+                    },
+                    error: function (xhr, status, err) {
+                        $("#notify-result").html("❌ Failed to call API: " + (err || status)).show();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

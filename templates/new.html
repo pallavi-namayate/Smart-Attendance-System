@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>FRAMS — Quick Actions</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap 3 -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <style>
+    body { background:#f7f9fb; }
+    .card { margin-top: 40px; padding: 20px; background: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .lead-small { color: #6c757d; font-size: 13px; }
+    .btn-large { padding: 12px 18px; font-size: 16px; }
+    .popover-help { cursor: pointer; }
+    .mode-btn { min-height:50px; margin-bottom:10px; }
+  </style>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<nav class="navbar navbar-inverse">
+  <div class="container">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/">FRAMS</a>
+    </div>
+    <ul class="nav navbar-nav navbar-right">
+      <li><a href="/index">Register</a></li>
+      <li><a href="/teacher_register">Register Teacher</a></li>
+      <li><a href="/">Start Recognition</a></li>
+      <!-- <li><a href="/dashboard">Teacher Attendance</a></li> -->
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-8 col-md-offset-2 card">
+      <h3 class="text-center">Quick Actions</h3>
+      <p class="text-center lead-small">Use these to quickly register a student/teacher, start recognition, or view attendance.</p>
+
+      <div class="row" style="margin-top:20px;">
+        <div class="col-sm-6">
+          <a href="/index" class="btn btn-block btn-success btn-large mode-btn" id="registerBtn">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Register Student
+          </a>
+        </div>
+        <div class="col-sm-6">
+          <form id="startForm" method="POST" action="/">
+            <button type="submit" class="btn btn-block btn-primary btn-large" id="startRec">
+              <span class="glyphicon glyphicon-facetime-video" aria-hidden="true"></span> Start Recognition
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <div class="col-sm-6">
+          <a href="/whole" class="btn btn-block btn-info btn-large">
+            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span> All Attendance
+          </a>
+        </div>
+         <!-- <div class="col-sm-6">
+          <a href="/dashboard" class="btn btn-block btn-default btn-large">
+            <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span> Dashboard
+          </a>
+        </div> -->
+      </div>
+
+      <!-- NEW ROW: Teacher actions -->
+      <div class="row" style="margin-top:12px;">
+        <div class="col-sm-6">
+          <a href="/teacher_attendance" class="btn btn-block btn-warning btn-large">
+            <span class="glyphicon glyphicon-education" aria-hidden="true"></span> Teacher Attendance
+          </a>
+        </div>
+        <div class="col-sm-6">
+          <a href="//teacher_register" class="btn btn-block btn-primary btn-large">
+            <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span> Register Teacher
+          </a>
+        </div>
+      </div>
+
+      <hr>
+
+      <p class="lead-small">
+        Need help? <a href="#" class="popover-help" title="About camera actions" data-toggle="popover" data-trigger="focus"
+        data-content="Camera actions open a fullscreen camera window on the server host and block the Flask process. Run this on the machine with the camera & display.">Click here</a>
+        — click anywhere to close the popover.
+      </p>
+
+      <div class="well" style="margin-top:10px;">
+        <strong>Tips:</strong>
+        <ul>
+          <li>Register students/teachers first. Student images are saved as <code>&lt;name&gt;.png</code> in the server's <code>Training images/</code> folder. Teacher images are saved under <code>Training images/teachers/</code> (use the register teacher page).</li>
+          <li>Start Recognition must run on the server host (camera + monitor attached). Press <strong>ESC</strong> in the camera window to cancel.</li>
+          <li>If you plan to run Flask remotely, consider a browser-based capture (I can convert to getUserMedia + upload flow).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(document).ready(function(){
+    // popover init
+    $('[data-toggle="popover"]').popover();
+
+    // confirmation because start/register open server camera GUI
+    $('#startForm').on('submit', function(e){
+        var ok = confirm("Start recognition on the server host? This will open a fullscreen camera window on the machine running Flask. Continue?");
+        if (!ok) e.preventDefault();
+        else $('#startRec').prop('disabled', true).text('Starting...');
+    });
+
+    $('#registerBtn').on('click', function(e){
+        // register opens /index — no POST here, but advise user
+        // no preventDefault so the link works normally, just a brief confirm for safety
+        var ok = confirm("Open Register page? The Register page will open the server camera when you submit the form to capture an image. Continue?");
+        if (!ok) e.preventDefault();
+    });
+
+    // make popover dismiss when clicking anywhere
+    $(document).on('click', function (e) {
+        $('[data-toggle="popover"]').each(function () {
+            if (!$(this).is(e.target) && $(this).has(e.target).length === 0 && $('.popover').has(e.target).length === 0) {
+                $(this).popover('hide');
+            }
+        });
+    });
+});
+</script>
+
+</body>
+</html>

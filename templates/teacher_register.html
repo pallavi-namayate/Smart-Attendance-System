@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Register Teacher</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <style>
+    body { padding: 20px; font-family: Arial, sans-serif; background:#f6f8fa; }
+    .container { max-width: 600px; margin: 30px auto; background: #fff; padding:20px; border-radius:6px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+    .note { font-size: 13px; color:#666; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3>Register Teacher</h3>
+    <form method="post" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="name">Teacher Name</label>
+        <input type="text" class="form-control" id="name" name="name" placeholder="Full name" required>
+      </div>
+      <div class="form-group">
+        <label for="subject">Subject (optional)</label>
+        <input type="text" class="form-control" id="subject" name="subject" placeholder="e.g. Math">
+      </div>
+
+      <div class="form-group">
+        <label>Upload image (optional)</label>
+        <input type="file" name="image" accept="image/*" class="form-control">
+        <p class="note">If you upload an image, the server will save it. Otherwise the server will try to open the camera to capture an image (server must have camera/display).</p>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Register Teacher</button>
+      <a href="/" class="btn btn-default">Cancel</a>
+    </form>
+  </div>
+</body>
+</html>
